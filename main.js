@@ -123,7 +123,11 @@ function setup() {
             new Float32Array([1, 1, -1, 1, 1, -1, -1, -1]),
             gl.STATIC_DRAW);
         
-        buffers['2x2_rect'] = buffer;
+        buffers['2x2_rect'] = {
+            'buffer': buffer,
+            'size': 2,
+            'count': 4
+        }
     }
 
     // unit triangle
@@ -139,8 +143,34 @@ function setup() {
                 R * Math.cos(330 * PI_OVER_180), R * Math.sin(330 * PI_OVER_180), 
             ]),
             gl.STATIC_DRAW);
-        buffers['unit_triangle'] = buffer;
+        buffers['unit_triangle'] = {
+            'buffer': buffer,
+            'size': 2,
+            'count': 3
+        }
     }
+
+    // unit square
+    {
+        let buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER,
+            new Float32Array(
+                [
+                  0.5, 0.5,
+                  -0.5, 0.5,
+                  0.5, -0.5,
+                  -0.5, -0.5
+                ]
+            ),
+            gl.STATIC_DRAW);
+        buffers['unit_square'] = {
+            'buffer': buffer,
+            'size': 2,
+            'count': 4
+        }
+    }
+
 
     reset();
 
@@ -184,10 +214,10 @@ function update(timestamp) {
             modelScale
         );
     
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffers['2x2_rect']);
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers['2x2_rect']['buffer']);
         gl.vertexAttribPointer(
             shaders['program1']['attribs']['a_coords'],
-            2,
+            buffers['2x2_rect']['size'],
             gl.FLOAT,
             false,
             0,
@@ -197,7 +227,7 @@ function update(timestamp) {
     
         gl.uniform4f(shaders['program1']['uniforms']['u_color'], 1, 0, 0, 1);
     
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, buffers['2x2_rect']['count']);
     
         gl.uniformMatrix4fv(
             shaders['program1']['uniforms']['u_modelviewProjection'],
@@ -206,23 +236,12 @@ function update(timestamp) {
         );    
     }
 
-
-    let pulseSine = Math.sin(pulseAngle);
-    pulseAngle += pulseDir * dt;
-
-    if (pulseAngle > PI_OVER_2) {
-        pulseDir *= -1.0;
-        pulseAngle = PI_OVER_2;
-    } else if (pulseAngle < DEG_30) {
-        pulseDir *= -1.0;
-        pulseAngle = DEG_30;
-    }
-
+    // paddle 0
     {
         mat4.identity(modelScale);
         mat4.scale(modelScale,
             modelScale,
-            [ pulseSine, pulseSine, 0 ]);
+            [ 20, 75, 0 ]);
     
         gl.uniformMatrix4fv(
             shaders['program1']['uniforms']['u_S'],
@@ -230,10 +249,10 @@ function update(timestamp) {
             modelScale
         );
     
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffers['unit_triangle']);
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers['unit_square']['buffer']);
         gl.vertexAttribPointer(
             shaders['program1']['attribs']['a_coords'],
-            2,
+            buffers['unit_square']['size'],
             gl.FLOAT,
             false,
             0,
@@ -241,9 +260,67 @@ function update(timestamp) {
         );
         gl.enableVertexAttribArray(shaders['program1']['attribs']['a_coords']);
     
-        gl.uniform4f(shaders['program1']['uniforms']['u_color'], 0, 0, 0, 1);
+        gl.uniform4f(shaders['program1']['uniforms']['u_color'], 1, 1, 1, 1);
     
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 3);    
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, buffers['unit_square']['count']);
+    }
+
+    // paddle 1
+    {
+        mat4.identity(modelScale);
+        mat4.scale(modelScale,
+            modelScale,
+            [ 20, 75, 0 ]);
+    
+        gl.uniformMatrix4fv(
+            shaders['program1']['uniforms']['u_S'],
+            false,
+            modelScale
+        );
+    
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers['unit_square']['buffer']);
+        gl.vertexAttribPointer(
+            shaders['program1']['attribs']['a_coords'],
+            buffers['unit_square']['size'],
+            gl.FLOAT,
+            false,
+            0,
+            0
+        );
+        gl.enableVertexAttribArray(shaders['program1']['attribs']['a_coords']);
+    
+        gl.uniform4f(shaders['program1']['uniforms']['u_color'], 1, 1, 1, 1);
+    
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, buffers['unit_square']['count']);
+    }
+
+    // ball
+    {
+        mat4.identity(modelScale);
+        mat4.scale(modelScale,
+            modelScale,
+            [ 20, 20, 0 ]);
+    
+        gl.uniformMatrix4fv(
+            shaders['program1']['uniforms']['u_S'],
+            false,
+            modelScale
+        );
+    
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers['unit_square']['buffer']);
+        gl.vertexAttribPointer(
+            shaders['program1']['attribs']['a_coords'],
+            buffers['unit_square']['size'],
+            gl.FLOAT,
+            false,
+            0,
+            0
+        );
+        gl.enableVertexAttribArray(shaders['program1']['attribs']['a_coords']);
+    
+        gl.uniform4f(shaders['program1']['uniforms']['u_color'], 1, 0, 1, 1);
+    
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, buffers['unit_square']['count']);
     }
    
     requestAnimationFrame(update);

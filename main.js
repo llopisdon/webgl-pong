@@ -1,10 +1,17 @@
 import { mat4 } from "./node_modules/gl-matrix/esm/index.js";
 
+// NES dimensions for fun
+const GAME_WIDTH = 256;
+const GAME_HEIGHT = 240;
+
 console.log(">>> init main.js <<<");
 
 // https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Basic_usage
 /** @type {HTMLCanvasElement} */
 const canvas = document.querySelector("#canvas");
+canvas.width = GAME_WIDTH;
+canvas.height = GAME_HEIGHT;
+
 /** @type {WebGLRenderingContext} */
 const gl = canvas.getContext("webgl");
 
@@ -14,8 +21,6 @@ if (!gl) {
     console.log("WebGL init...")
 }
 
-const NES_WIDTH = 256;
-const NES_HEIGHT = 240;
 
 let dt = 0;
 let last = 0;
@@ -283,13 +288,18 @@ function update(timestamp) {
 
     gl.useProgram(shaders['program1'].program);
 
+    //
+    // set projection matrix for use by background
+    //
+
+    gl.uniformMatrix4fv(
+        shaders['program1']['uniforms']['u_modelviewProjection'],
+        false,
+        normalizedModelViewProjection
+    );    
+
     // background
     {
-        gl.uniformMatrix4fv(
-            shaders['program1']['uniforms']['u_modelviewProjection'],
-            false,
-            normalizedModelViewProjection
-        );    
 
         mat4.identity(modelScale);
         gl.uniformMatrix4fv(
@@ -321,13 +331,18 @@ function update(timestamp) {
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, buffers['2x2_rect']['count']);
     }
 
+    //
+    // set projection matrix for use by game objects
+    //
+
+    gl.uniformMatrix4fv(
+        shaders['program1']['uniforms']['u_modelviewProjection'],
+        false,
+        modelViewProjection
+    );
+
     // paddle 0
     {
-        gl.uniformMatrix4fv(
-            shaders['program1']['uniforms']['u_modelviewProjection'],
-            false,
-            modelViewProjection
-        );
         
         mat4.identity(modelScale);
         mat4.scale(modelScale,
@@ -369,12 +384,6 @@ function update(timestamp) {
 
     // paddle 1
     {
-        gl.uniformMatrix4fv(
-            shaders['program1']['uniforms']['u_modelviewProjection'],
-            false,
-            modelViewProjection
-        );    
-
         mat4.identity(modelScale);
         mat4.scale(modelScale,
             modelScale,
@@ -415,12 +424,6 @@ function update(timestamp) {
 
     // ball
     {
-        gl.uniformMatrix4fv(
-            shaders['program1']['uniforms']['u_modelviewProjection'],
-            false,
-            modelViewProjection
-        );
-
         mat4.identity(modelScale);
         mat4.scale(modelScale,
             modelScale,

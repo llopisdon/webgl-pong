@@ -48,19 +48,40 @@ const KEY_ARROW_RIGHT = "ArrowRight";
 const KEY_CONTROL = "Control";
 const KEY_SPACE = " ";
 
+const KEY_W = "KeyW";
+const KEY_A = "KeyA";
+const KEY_S = "KeyS";
+const KEY_D = "KeyD";
+
+const KEY_I = "KeyI";
+const KEY_J = "KeyJ";
+const KEY_K = "KeyK";
+const KEY_L = "KeyL";
+
+const GAME_KEYS = [
+    KEY_ARROW_LEFT,
+    KEY_ARROW_RIGHT,
+    KEY_ARROW_UP,
+    KEY_ARROW_DOWN,
+
+    KEY_W, KEY_A, KEY_S, KEY_D,
+
+    KEY_I, KEY_J, KEY_K, KEY_L
+];
+
 let keys = {};
 
 document.addEventListener("keydown", e => {
     console.log(`keydown -> key: ${e.key} code: ${e.code}`);
-    if ( [KEY_ARROW_LEFT, KEY_ARROW_RIGHT, KEY_ARROW_UP, KEY_ARROW_DOWN].indexOf(e.key) >= 0) {
+    if ( GAME_KEYS.indexOf(e.key) >= 0) {
         e.preventDefault();
     }
-    keys[e.key] = true;
+    keys[e.code] = true;
 });
 
 document.addEventListener("keyup", e => {
     console.log(`keyup -> key: ${e.key} code: ${e.code}`);
-    keys[e.key] = false;
+    keys[e.code] = false;
 });
 
 // TODO add responsive canvas
@@ -204,7 +225,7 @@ function reset() {
 }
 
 
-const PADDLE_SPEED = 100.0;
+const PADDLE_SPEED = 120.0;
 const PADDLE_WIDTH = 10.0;
 const PADDLE_HEIGHT = 60.0;
 const BALL_RADIUS = PADDLE_WIDTH;
@@ -215,11 +236,11 @@ let MAX_BALL_Y = 0;
 
 let paddle0XPos = 0;
 let paddle0YPos = 0;
-let paddle0Dir = -1.0;
+let paddle0Dir = 0;
 
 let paddle1XPos = 0;
 let paddle1YPos = 0;
-let paddle1Dir = 1.0;
+let paddle1Dir = 0;
 
 let ballXPos = 0.0;
 let ballYPos = 0.0;
@@ -242,24 +263,37 @@ function update(timestamp) {
     // move paddles
     //
     
+    if (keys[KEY_W]) {
+        paddle0Dir = 1.0;    
+    } else if (keys[KEY_S]) {
+        paddle0Dir = -1.0;
+    } else {
+        paddle0Dir = 0.0;
+    }
+    
     paddle0YPos = paddle0YPos + (paddle0Dir * PADDLE_SPEED * dt);
+
     if (paddle0YPos < -MAX_PADDLE_Y) {
         paddle0YPos = -MAX_PADDLE_Y;
-        paddle0Dir = -paddle0Dir;
     }
     else if (paddle0YPos > MAX_PADDLE_Y) {
         paddle0YPos = MAX_PADDLE_Y;
-        paddle0Dir = -paddle0Dir;
+    }
+
+    if (keys[KEY_I]) {
+        paddle1Dir = 1.0;    
+    } else if (keys[KEY_K]) {
+        paddle1Dir = -1.0;
+    } else {
+        paddle1Dir = 0.0;
     }
 
     paddle1YPos = paddle1YPos + (paddle1Dir * PADDLE_SPEED * dt);
     if (paddle1YPos < -MAX_PADDLE_Y) {
         paddle1YPos = -MAX_PADDLE_Y;
-        paddle1Dir = -paddle1Dir;
     }
     else if (paddle1YPos > MAX_PADDLE_Y) {
         paddle1YPos = MAX_PADDLE_Y;
-        paddle1Dir = -paddle1Dir;
     }
 
     ballXPos = ballXPos + (ballXDir * PADDLE_SPEED * dt);

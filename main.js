@@ -27,6 +27,7 @@ const normalizedModelViewProjection = mat4.create();
 console.log(normalizedModelViewProjection);
 const modelViewProjection = mat4.create();
 const modelScale = mat4.create();
+const modelTranslate = mat4.create();
 
 //
 // Keyboard
@@ -84,11 +85,12 @@ function setup() {
         attribute vec4 a_coords;
         attribute vec4 a_color;
         uniform mat4 u_modelviewProjection;
-        uniform mat4 u_S;
+        uniform mat4 u_Scale;
+        uniform mat4 u_Translate;
         uniform vec4 u_color;
         varying lowp vec4 v_color;
         void main() {
-            gl_Position = u_modelviewProjection * u_S * a_coords;
+            gl_Position = u_modelviewProjection * u_Translate * u_Scale * a_coords;
             v_color = u_color;
         }
         `;
@@ -109,7 +111,8 @@ function setup() {
             },
             'uniforms': {
                 'u_modelviewProjection': gl.getUniformLocation(program, 'u_modelviewProjection'),
-                'u_S': gl.getUniformLocation(program, 'u_S'),
+                'u_Scale': gl.getUniformLocation(program, 'u_Scale'),
+                'u_Translate': gl.getUniformLocation(program, 'u_Translate'),
                 'u_color': gl.getUniformLocation(program, 'u_color')
             }
         };
@@ -184,7 +187,39 @@ function reset() {
     keys[KEY_ARROW_DOWN] = false;
     keys[KEY_CONTROL] = false;
     keys[KEY_SPACE] = false;
+
+    paddle0XPos = 0.0 - gl.canvas.clientWidth / 2.0 + 20;
+    paddle0YPos = 0.0;
+    paddle1XPos = 0.0 + gl.canvas.clientWidth / 2.0 - 20;
+    paddle1YPos = 0.0;
+
+    MAX_PADDLE_Y = 0 + gl.canvas.clientHeight / 2.0 - (PADDLE_HEIGHT / 2.0);
+    MAX_BALL_X = 0 + gl.canvas.clientWidth / 2.0 - (BALL_RADIUS / 2.0);
+    MAX_BALL_Y = 0 + gl.canvas.clientHeight / 2.0 - (BALL_RADIUS / 2.0);
 }
+
+
+const PADDLE_SPEED = 100.0;
+const PADDLE_WIDTH = 10.0;
+const PADDLE_HEIGHT = 60.0;
+const BALL_RADIUS = PADDLE_WIDTH;
+
+let MAX_PADDLE_Y = 0;
+let MAX_BALL_X = 0;
+let MAX_BALL_Y = 0;
+
+let paddle0XPos = 0;
+let paddle0YPos = 0;
+let paddle0Dir = -1.0;
+
+let paddle1XPos = 0;
+let paddle1YPos = 0;
+let paddle1Dir = 1.0;
+
+let ballXPos = 0.0;
+let ballYPos = 0.0;
+let ballXDir = 1.0;
+let ballYDir = -1.0;
 
 let pulseAngle = 0.0;
 const PI_OVER_2 = Math.PI / 2;
@@ -198,20 +233,76 @@ function update(timestamp) {
     dt = t - last;
     last = t;
     
+    //
+    // move paddles
+    //
+    
+    paddle0YPos = paddle0YPos + (paddle0Dir * PADDLE_SPEED * dt);
+    if (paddle0YPos < -MAX_PADDLE_Y) {
+        paddle0YPos = -MAX_PADDLE_Y;
+        paddle0Dir = -paddle0Dir;
+    }
+    else if (paddle0YPos > MAX_PADDLE_Y) {
+        paddle0YPos = MAX_PADDLE_Y;
+        paddle0Dir = -paddle0Dir;
+    }
+
+    paddle1YPos = paddle1YPos + (paddle1Dir * PADDLE_SPEED * dt);
+    if (paddle1YPos < -MAX_PADDLE_Y) {
+        paddle1YPos = -MAX_PADDLE_Y;
+        paddle1Dir = -paddle1Dir;
+    }
+    else if (paddle1YPos > MAX_PADDLE_Y) {
+        paddle1YPos = MAX_PADDLE_Y;
+        paddle1Dir = -paddle1Dir;
+    }
+
+    ballXPos = ballXPos + (ballXDir * PADDLE_SPEED * dt);
+    if (ballXPos < -MAX_BALL_X) {
+        ballXPos = -MAX_BALL_X;
+        ballXDir = -ballXDir;
+    }
+    else if (ballXPos > MAX_BALL_X) {
+        ballXPos = MAX_BALL_X;
+        ballXDir = -ballXDir;
+    }
+
+    ballYPos = ballYPos + (ballYDir * PADDLE_SPEED * dt);
+    if (ballYPos < -MAX_BALL_Y) {
+        ballYPos = -MAX_BALL_Y;
+        ballYDir = -ballYDir;
+    }
+    else if (ballYPos > MAX_BALL_Y) {
+        ballYPos = MAX_BALL_Y;
+        ballYDir = -ballYDir;
+    }
+
+    //
+    // draw
+    //
+
     gl.useProgram(shaders['program1'].program);
 
-    gl.uniformMatrix4fv(
-        shaders['program1']['uniforms']['u_modelviewProjection'],
-        false,
-        normalizedModelViewProjection
-    );
-
+    // background
     {
+        gl.uniformMatrix4fv(
+            shaders['program1']['uniforms']['u_modelviewProjection'],
+            false,
+            normalizedModelViewProjection
+        );    
+
         mat4.identity(modelScale);
         gl.uniformMatrix4fv(
-            shaders['program1']['uniforms']['u_S'],
+            shaders['program1']['uniforms']['u_Scale'],
             false,
             modelScale
+        );
+
+        mat4.identity(modelTranslate);
+        gl.uniformMatrix4fv(
+            shaders['program1']['uniforms']['u_Translate'],
+            false,
+            modelTranslate
         );
     
         gl.bindBuffer(gl.ARRAY_BUFFER, buffers['2x2_rect']['buffer']);
@@ -228,25 +319,36 @@ function update(timestamp) {
         gl.uniform4f(shaders['program1']['uniforms']['u_color'], 1, 0, 0, 1);
     
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, buffers['2x2_rect']['count']);
-    
-        gl.uniformMatrix4fv(
-            shaders['program1']['uniforms']['u_modelviewProjection'],
-            false,
-            modelViewProjection
-        );    
     }
 
     // paddle 0
     {
+        gl.uniformMatrix4fv(
+            shaders['program1']['uniforms']['u_modelviewProjection'],
+            false,
+            modelViewProjection
+        );
+        
         mat4.identity(modelScale);
         mat4.scale(modelScale,
             modelScale,
-            [ 20, 75, 0 ]);
+            [ PADDLE_WIDTH, PADDLE_HEIGHT, 0 ]);
     
         gl.uniformMatrix4fv(
-            shaders['program1']['uniforms']['u_S'],
+            shaders['program1']['uniforms']['u_Scale'],
             false,
             modelScale
+        );
+
+        mat4.identity(modelTranslate);
+        mat4.translate(modelTranslate,
+            modelTranslate,
+            [paddle0XPos, paddle0YPos, 0.0]);
+
+        gl.uniformMatrix4fv(
+            shaders['program1']['uniforms']['u_Translate'],
+            false,
+            modelTranslate
         );
     
         gl.bindBuffer(gl.ARRAY_BUFFER, buffers['unit_square']['buffer']);
@@ -267,15 +369,32 @@ function update(timestamp) {
 
     // paddle 1
     {
+        gl.uniformMatrix4fv(
+            shaders['program1']['uniforms']['u_modelviewProjection'],
+            false,
+            modelViewProjection
+        );    
+
         mat4.identity(modelScale);
         mat4.scale(modelScale,
             modelScale,
-            [ 20, 75, 0 ]);
+            [ PADDLE_WIDTH, PADDLE_HEIGHT, 0 ]);
     
         gl.uniformMatrix4fv(
-            shaders['program1']['uniforms']['u_S'],
+            shaders['program1']['uniforms']['u_Scale'],
             false,
             modelScale
+        );
+
+        mat4.identity(modelTranslate);
+        mat4.translate(modelTranslate,
+            modelTranslate,
+            [paddle1XPos, paddle1YPos, 0.0]);
+
+        gl.uniformMatrix4fv(
+            shaders['program1']['uniforms']['u_Translate'],
+            false,
+            modelTranslate
         );
     
         gl.bindBuffer(gl.ARRAY_BUFFER, buffers['unit_square']['buffer']);
@@ -296,17 +415,34 @@ function update(timestamp) {
 
     // ball
     {
+        gl.uniformMatrix4fv(
+            shaders['program1']['uniforms']['u_modelviewProjection'],
+            false,
+            modelViewProjection
+        );
+
         mat4.identity(modelScale);
         mat4.scale(modelScale,
             modelScale,
-            [ 20, 20, 0 ]);
+            [ BALL_RADIUS, BALL_RADIUS, 0 ]);
     
         gl.uniformMatrix4fv(
-            shaders['program1']['uniforms']['u_S'],
+            shaders['program1']['uniforms']['u_Scale'],
             false,
             modelScale
         );
     
+        mat4.identity(modelTranslate);
+        mat4.translate(modelTranslate,
+            modelTranslate,
+            [ballXPos, ballYPos, 0.0]);
+
+        gl.uniformMatrix4fv(
+            shaders['program1']['uniforms']['u_Translate'],
+            false,
+            modelTranslate
+        );
+
         gl.bindBuffer(gl.ARRAY_BUFFER, buffers['unit_square']['buffer']);
         gl.vertexAttribPointer(
             shaders['program1']['attribs']['a_coords'],
@@ -318,7 +454,7 @@ function update(timestamp) {
         );
         gl.enableVertexAttribArray(shaders['program1']['attribs']['a_coords']);
     
-        gl.uniform4f(shaders['program1']['uniforms']['u_color'], 1, 0, 1, 1);
+        gl.uniform4f(shaders['program1']['uniforms']['u_color'], 1, 1, 1, 1);
     
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, buffers['unit_square']['count']);
     }

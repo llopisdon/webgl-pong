@@ -72,6 +72,8 @@ const KEY_I = "KeyI";
 const KEY_J = "KeyJ";
 const KEY_K = "KeyK";
 const KEY_L = "KeyL";
+
+const KEY_Q = "KeyQ";
 const KEY_Z = "KeyZ";
 
 const GAME_KEYS = [
@@ -87,6 +89,7 @@ const GAME_KEYS = [
     KEY_Z,
     
     KEY_SPACE,
+    KEY_Q,
 ];
 
 let keys = {};
@@ -320,9 +323,11 @@ let player1Score = 0;
 let player2Score = 0;
 
 const GAME_STATE_MAIN_MENU = 0;
-const GAME_STATE_PLAY = 1;
-const GAME_STATE_PAUSE = 2;
+const GAME_STATE_START = 1;
+const GAME_STATE_PLAY = 2;
 const GAME_STATE_GAME_OVER = 3;
+
+const GAME_WIN_SCORE = 9;
 
 let gameState = GAME_STATE_MAIN_MENU;
 
@@ -356,8 +361,8 @@ function update(timestamp) {
     }
 
     switch (gameState) {
+        case GAME_STATE_START:
         case GAME_STATE_PLAY:
-        case GAME_STATE_PAUSE:
             doGame();
             break;
         case GAME_STATE_MAIN_MENU:
@@ -371,6 +376,14 @@ function update(timestamp) {
     }
    
     requestAnimationFrame(update);
+}
+
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random
+function getRandomIntInclusive(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    //The maximum is inclusive and the minimum is inclusive 
+    return Math.floor(Math.random() * (max - min + 1)) + min; 
 }
 
 // http://paulbourke.net/geometry/pointlineplane/
@@ -407,7 +420,8 @@ function doMainMenu() {
 
     if (keys[KEY_SPACE]) {
         reset();
-        gameState = GAME_STATE_PLAY;
+        resetPong();
+        gameState = GAME_STATE_START;
         keys[KEY_SPACE] = false;
         console.log(">>> GAME PLAY <<<");
     }
@@ -440,8 +454,8 @@ function doGame() {
     // HUD
     //
 
-    ctx.fillText(player1Score, PADDING_8, TEXT_TOP+PADDING_4);
-    ctx.fillText(player2Score, GAME_WIDTH - PADDING_16 - PADDING_8, TEXT_TOP+PADDING_4);
+    ctx.fillText(player1Score, TEXT_CENTER_X - PADDING_16 - PADDING_8 - PADDING_4, TEXT_TOP+PADDING_4);
+    ctx.fillText(player2Score, TEXT_CENTER_X + PADDING_16 - PADDING_4, TEXT_TOP+PADDING_4);
 
     //
     // move paddles
@@ -487,43 +501,54 @@ function doGame() {
         paddle1YPos = MAX_PADDLE_Y;
     }
 
+    if (gameState === GAME_STATE_START && keys[KEY_SPACE]) {
+        keys[KEY_SPACE] = false;
+        gameState = GAME_STATE_PLAY;
+    }
+
     //
     // move ball
     //
 
-    ballPrevXPos = ballXPos;
-    ballPrevYPos = ballYPos;
+    let playerScored = false;
 
-    ballXPos = ballXPos + (ballXDir * PADDLE_SPEED * dt);
-    if (ballXPos < -MAX_BALL_X) {
-        ballXPos = -MAX_BALL_X;
-        ballXDir = -ballXDir;
-        player2Score++;
-        ballXPos = 0;
-        ballYPos = 0;
-        if (player2Score > 9) {
-            player2Score = 0;
+    if (gameState === GAME_STATE_PLAY) {
+        ballPrevXPos = ballXPos;
+        ballPrevYPos = ballYPos;
+    
+        ballXPos = ballXPos + (ballXDir * PADDLE_SPEED * dt);
+
+        if (ballXPos < -MAX_BALL_X) {
+            ballXPos = -MAX_BALL_X;
+            ballXDir = -ballXDir;
+            player2Score++;
+            playerScored = true;
         }
-    }
-    else if (ballXPos > MAX_BALL_X) {
-        ballXPos = MAX_BALL_X;
-        ballXDir = -ballXDir;
-        player1Score++;
-        ballXPos = 0;
-        ballYPos = 0;
-        if (player1Score > 9) {
-            player1Score = 0;
-        }        
+        else if (ballXPos > MAX_BALL_X) {
+            ballXPos = MAX_BALL_X;
+            ballXDir = -ballXDir;
+            player1Score++;
+            playerScored = true;
+        }
+    
+        ballYPos = ballYPos + (ballYDir * PADDLE_SPEED * dt);
+        if (ballYPos < -MAX_BALL_Y) {
+            ballYPos = -MAX_BALL_Y;
+            ballYDir = -ballYDir;
+        }
+        else if (ballYPos > MAX_BALL_Y) {
+            ballYPos = MAX_BALL_Y;
+            ballYDir = -ballYDir;
+        }    
     }
 
-    ballYPos = ballYPos + (ballYDir * PADDLE_SPEED * dt);
-    if (ballYPos < -MAX_BALL_Y) {
-        ballYPos = -MAX_BALL_Y;
-        ballYDir = -ballYDir;
-    }
-    else if (ballYPos > MAX_BALL_Y) {
-        ballYPos = MAX_BALL_Y;
-        ballYDir = -ballYDir;
+    //
+    // reset pong
+    //
+
+    if (playerScored) {
+        resetPong();
+        gameState = GAME_STATE_START;
     }
 
     // check for collision if lines formed by ball and paddle intersect
@@ -531,26 +556,46 @@ function doGame() {
     if (checkIntersectionTwoLines(ballXPos, ballYPos, ballPrevXPos, ballPrevYPos, 
         paddle0XPos, paddle0YPos-PADDLE_HALF_HEIGHT, 
         paddle0XPos, paddle0YPos+PADDLE_HALF_HEIGHT)) {
-        
-        ballXPos = paddle0XPos + PADDLE_HALF_WIDTH + BALL_HALF_RADIUS;
-        ballXDir = -ballXDir;
+            ballXPos = paddle0XPos + PADDLE_HALF_WIDTH + BALL_HALF_RADIUS;
+            ballXDir = -ballXDir;
+            if (keys[KEY_W]) {
+                ballYDir = 1;
+            } else if (keys[KEY_S]) {
+                ballYDir = -1;
+            } else {
+                ballYDir = 0;
+            }
     }
 
     if (checkIntersectionTwoLines(ballXPos, ballYPos, ballPrevXPos, ballPrevYPos, 
         paddle1XPos, paddle1YPos-PADDLE_HALF_HEIGHT, 
         paddle1PrevXPos, paddle1PrevYPos+PADDLE_HALF_HEIGHT)) {
-        
             ballXPos = paddle1XPos - PADDLE_HALF_WIDTH - BALL_HALF_RADIUS;
             ballXDir = -ballXDir;
+            if (keys[KEY_I]) {
+                ballYDir = 1;
+            } else if (keys[KEY_K]) {
+                ballYDir = -1;
+            } else {
+                ballYDir = 0;
+            }
     }
 
     //
     // check for game over
     //
 
-    if (player1Score === 9 || player2Score === 9) {
+    if (player1Score === GAME_WIN_SCORE || player2Score === GAME_WIN_SCORE) {
         gameState = GAME_STATE_GAME_OVER;
         gameTimer = GAME_TIMER_GAME_OVER;
+    }
+
+    //
+    // check for quit
+    //
+    if (keys[KEY_Q]) {
+        reset();
+        gameState = GAME_STATE_MAIN_MENU;
     }
 
     //
@@ -570,6 +615,45 @@ function doGame() {
         false,
         modelViewProjection
     );
+
+    // middle divider
+    {
+        
+        mat4.identity(modelScale);
+        mat4.scale(modelScale,
+            modelScale,
+            [ PADDLE_WIDTH, GAME_HEIGHT, 0 ]);
+    
+        gl.uniformMatrix4fv(
+            shaders['program1']['uniforms']['u_Scale'],
+            false,
+            modelScale
+        );
+
+        mat4.identity(modelTranslate);
+
+        gl.uniformMatrix4fv(
+            shaders['program1']['uniforms']['u_Translate'],
+            false,
+            modelTranslate
+        );
+    
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers['unit_square']['buffer']);
+        gl.vertexAttribPointer(
+            shaders['program1']['attribs']['a_coords'],
+            buffers['unit_square']['size'],
+            gl.FLOAT,
+            false,
+            0,
+            0
+        );
+        gl.enableVertexAttribArray(shaders['program1']['attribs']['a_coords']);
+    
+        gl.uniform4f(shaders['program1']['uniforms']['u_color'], 0, 0, 0, 1);
+    
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, buffers['unit_square']['count']);
+    }
+
 
     // paddle 0
     {
@@ -691,6 +775,17 @@ function doGame() {
     
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, buffers['unit_square']['count']);
     }
+}
+
+function resetPong() {
+    const dirsX = [-1, 1];
+    const dirsY = [-1, 0, 1];
+    ballXPos = 0;
+    ballYPos = 0;
+    ballPrevXPos = 0;
+    ballPrevYPos = 0;
+    ballXDir = dirsX[Math.floor(Math.random() * dirsX.length)];
+    ballYDir = dirsY[Math.floor(Math.random() * dirsY.length)];
 }
 
 function drawBackground() {

@@ -23,7 +23,7 @@ textCanvas.height = GAME_HEIGHT;
 const ctx = textCanvas.getContext("2d");
 ctx.font = '24px"Pixel NES"';
 ctx.fillStyle = "white";
-
+ctx.strokeStyle = "white";
 
 if (!gl) {
     throw "Unable to init WebGL!";
@@ -266,7 +266,10 @@ function reset() {
 const PADDLE_SPEED = 120.0;
 const PADDLE_WIDTH = 10.0;
 const PADDLE_HEIGHT = 60.0;
+const PADDLE_HALF_HEIGHT = PADDLE_HEIGHT / 2.0;
+const PADDLE_HALF_WIDTH = PADDLE_WIDTH / 2.0;
 const BALL_RADIUS = PADDLE_WIDTH;
+const BALL_HALF_RADIUS = BALL_RADIUS / 2.0;
 
 let MAX_PADDLE_Y = 0;
 let MAX_BALL_X = 0;
@@ -300,6 +303,9 @@ let pulseDir = 1.0;
 const BLINK_RATE = 0.5;
 let blink = BLINK_RATE;
 
+let player1Score = 0;
+let player2Score = 0;
+
 function update(timestamp) {
     
     // https://developer.mozilla.org/en-US/docs/Games/Anatomy
@@ -312,10 +318,16 @@ function update(timestamp) {
     //
 
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    ctx.fillText(timestamp, TEXT_START, TEXT_TOP);
 
-    ctx.fillText(dt, TEXT_START, TEXT_TOP + TEXT_HEIGHT);
-    ctx.fillText(TITLE_TEXT, TEXT_CENTER_X-TITLE_TEXT_WIDTH, TEXT_TOP + TEXT_HEIGHT * 2);
+
+    // ctx.fillText(timestamp, TEXT_START, TEXT_TOP);
+
+    // ctx.fillText(dt, TEXT_START, TEXT_TOP + TEXT_HEIGHT);
+    // ctx.fillText(TITLE_TEXT, TEXT_CENTER_X-TITLE_TEXT_WIDTH, TEXT_TOP + TEXT_HEIGHT * 2);
+
+    ctx.fillText(player1Score, TEXT_CENTER_X-22, TEXT_TOP+2);
+    ctx.fillText(player2Score, TEXT_CENTER_X+6, TEXT_TOP+2);
+
 
     blink -= dt;
     if (blink > 0.0) {
@@ -324,6 +336,7 @@ function update(timestamp) {
         blink = BLINK_RATE;
     }
 
+    
     ctx.moveTo(TEXT_CENTER_X, 0);
     ctx.lineTo(TEXT_CENTER_X, ctx.canvas.height);
     ctx.moveTo(0, TEXT_CENTER_Y);
@@ -374,6 +387,10 @@ function update(timestamp) {
         paddle1YPos = MAX_PADDLE_Y;
     }
 
+    //
+    // move ball
+    //
+
     ballPrevXPos = ballXPos;
     ballPrevYPos = ballYPos;
 
@@ -381,10 +398,22 @@ function update(timestamp) {
     if (ballXPos < -MAX_BALL_X) {
         ballXPos = -MAX_BALL_X;
         ballXDir = -ballXDir;
+        player2Score++;
+        ballXPos = 0;
+        ballYPos = 0;
+        if (player2Score > 9) {
+            player2Score = 0;
+        }
     }
     else if (ballXPos > MAX_BALL_X) {
         ballXPos = MAX_BALL_X;
         ballXDir = -ballXDir;
+        player1Score++;
+        ballXPos = 0;
+        ballYPos = 0;
+        if (player1Score > 9) {
+            player1Score = 0;
+        }        
     }
 
     ballYPos = ballYPos + (ballYDir * PADDLE_SPEED * dt);
@@ -395,6 +424,24 @@ function update(timestamp) {
     else if (ballYPos > MAX_BALL_Y) {
         ballYPos = MAX_BALL_Y;
         ballYDir = -ballYDir;
+    }
+
+    // check for collision if lines formed by ball and paddle intersect
+
+    if (checkIntersectionTwoLines(ballXPos, ballYPos, ballPrevXPos, ballPrevYPos, 
+        paddle0XPos, paddle0YPos-PADDLE_HALF_HEIGHT, 
+        paddle0XPos, paddle0YPos+PADDLE_HALF_HEIGHT)) {
+        
+        ballXPos = paddle0XPos + PADDLE_HALF_WIDTH + BALL_HALF_RADIUS;
+        ballXDir = -ballXDir;
+    }
+
+    if (checkIntersectionTwoLines(ballXPos, ballYPos, ballPrevXPos, ballPrevYPos, 
+        paddle1XPos, paddle1YPos-PADDLE_HALF_HEIGHT, 
+        paddle1PrevXPos, paddle1PrevYPos+PADDLE_HALF_HEIGHT)) {
+        
+            ballXPos = paddle1XPos - PADDLE_HALF_WIDTH - BALL_HALF_RADIUS;
+            ballXDir = -ballXDir;
     }
 
     //
@@ -579,6 +626,29 @@ function update(timestamp) {
    
     requestAnimationFrame(update);
 }
+
+// http://paulbourke.net/geometry/pointlineplane/
+function checkIntersectionTwoLines(x1, y1, x2, y2, x3, y3, x4, y4) {
+
+    let x4x3 = x4 - x3;
+    let y1y3 = y1 - y3;
+    
+    let y4y3 = y4 - y3;
+    let x1x3 = x1 - x3;
+
+    let x2x1 = x2 - x1;
+    let y2y1 = y2 - y1;
+
+    let a = ((x4x3 * y1y3) - (y4y3 * x1x3)) / ((y4y3 * x2x1) - (x4x3 * y2y1));
+    let b = ((x2x1 * y1y3) - (y2y1 * x1x3)) / ((y4y3 * x2x1) - (x4x3 * y2y1));
+
+    if (a >= 0 && a <= 1 && b >= 0 && b <= 1) {
+        return true;
+    }
+
+    return false;
+}
+
 
 requestAnimationFrame(setup);
 

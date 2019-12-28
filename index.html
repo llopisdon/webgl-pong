@@ -4,9 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">    
     <title>webgl-pong</title>
+    <style>
+    @font-face {
+        font-family:"Pixel NES";
+        src:url("res/Pixel_NES.eot?") format("eot"),url("res/Pixel_NES.woff") format("woff"),url("res/Pixel_NES.ttf") format("truetype"),url("res/Pixel_NES.svg#PixelNES") format("svg");
+        font-weight:normal;
+        font-style:normal;
+    }
+    h1 {
+        font-family: "Pixel NES";
+    }
+    .container {
+        position: relative;
+    }
+    #text {
+        position: absolute;
+        left: 0px;
+        top: 0px;
+        z-index: 10;
+    }
+    </style>
 </head>
 <body>
-    <canvas id="canvas"></canvas>
+    <h1>WEBGL-PONG</h1>
+    <div class="container">
+        <canvas id="canvas"></canvas>
+        <canvas id="text"></canvas>    
+    </div>
     <script src="main.js" type="module"></script>
 </body>
 </html>

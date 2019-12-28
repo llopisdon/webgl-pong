@@ -11,15 +11,31 @@ console.log(">>> init main.js <<<");
 const canvas = document.querySelector("#canvas");
 canvas.width = GAME_WIDTH;
 canvas.height = GAME_HEIGHT;
-
 /** @type {WebGLRenderingContext} */
 const gl = canvas.getContext("webgl");
+
+
+/** @type {HTMLCanvasElement} */
+const textCanvas = document.querySelector("#text");
+textCanvas.width = GAME_WIDTH;
+textCanvas.height = GAME_HEIGHT;
+/** @type {CanvasRenderingContext2D} */
+const ctx = textCanvas.getContext("2d");
+ctx.font = '24px"Pixel NES"';
+ctx.fillStyle = "white";
+
 
 if (!gl) {
     throw "Unable to init WebGL!";
 } else {
     console.log("WebGL init...")
 }
+
+const TEXT_START = 4;
+const TEXT_TOP = 20;
+const TEXT_HEIGHT = 20;
+const TEXT_CENTER_X = GAME_WIDTH / 2;
+const TEXT_CENTER_Y = GAME_HEIGHT / 2;
 
 
 let dt = 0;
@@ -86,7 +102,25 @@ document.addEventListener("keyup", e => {
 
 // TODO add responsive canvas
 
+// game text
+let START_TEXT_WIDTH = 0;
+let TITLE_TEXT_WIDTH = 0;
+const START_TEXT = "START";
+const TITLE_TEXT = "WEBGL-PONG";
+
+
 function setup() {
+
+    //
+    // text init
+    //
+
+    START_TEXT_WIDTH = ctx.measureText(START_TEXT).width / 2;
+    TITLE_TEXT_WIDTH = ctx.measureText(TITLE_TEXT).width / 2;
+
+    //
+    // webgl init
+    //
     
     gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -161,7 +195,7 @@ function setup() {
 
     // unit triangle
     {
-        const R = 100;
+        const R = 1;
         const PI_OVER_180 = Math.PI / 180;
         let buffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -200,7 +234,6 @@ function setup() {
         }
     }
 
-
     reset();
 
     requestAnimationFrame(update);
@@ -216,8 +249,13 @@ function reset() {
 
     paddle0XPos = 0.0 - gl.canvas.clientWidth / 2.0 + 20;
     paddle0YPos = 0.0;
+    paddle0PrevXPos = paddle0XPos;
+    paddle0PrevYPos = paddle0YPos;
+
     paddle1XPos = 0.0 + gl.canvas.clientWidth / 2.0 - 20;
     paddle1YPos = 0.0;
+    paddle1PrevXPos = paddle1XPos;
+    paddle1PrevYPos = paddle1YPos;
 
     MAX_PADDLE_Y = 0 + gl.canvas.clientHeight / 2.0 - (PADDLE_HEIGHT / 2.0);
     MAX_BALL_X = 0 + gl.canvas.clientWidth / 2.0 - (BALL_RADIUS / 2.0);
@@ -236,14 +274,20 @@ let MAX_BALL_Y = 0;
 
 let paddle0XPos = 0;
 let paddle0YPos = 0;
+let paddle0PrevXPos = 0;
+let paddle0PrevYPos = 0;
 let paddle0Dir = 0;
 
 let paddle1XPos = 0;
 let paddle1YPos = 0;
+let paddle1PrevXPos = 0;
+let paddle1PrevYPos = 0;
 let paddle1Dir = 0;
 
 let ballXPos = 0.0;
 let ballYPos = 0.0;
+let ballPrevXPos = 0;
+let ballPrevYPos = 0;
 let ballXDir = 1.0;
 let ballYDir = -1.0;
 
@@ -252,17 +296,47 @@ const PI_OVER_2 = Math.PI / 2;
 const DEG_30 = 30 * (Math.PI / 180);
 let pulseDir = 1.0;
 
-function update(timestamp) {
 
+const BLINK_RATE = 0.5;
+let blink = BLINK_RATE;
+
+function update(timestamp) {
+    
     // https://developer.mozilla.org/en-US/docs/Games/Anatomy
     const t = timestamp / 1000;
     dt = t - last;
     last = t;
-    
+
+    //
+    // HUD
+    //
+
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillText(timestamp, TEXT_START, TEXT_TOP);
+
+    ctx.fillText(dt, TEXT_START, TEXT_TOP + TEXT_HEIGHT);
+    ctx.fillText(TITLE_TEXT, TEXT_CENTER_X-TITLE_TEXT_WIDTH, TEXT_TOP + TEXT_HEIGHT * 2);
+
+    blink -= dt;
+    if (blink > 0.0) {
+        ctx.fillText(START_TEXT, TEXT_CENTER_X-START_TEXT_WIDTH, TEXT_CENTER_Y);    
+    } else if (blink < -BLINK_RATE) {
+        blink = BLINK_RATE;
+    }
+
+    ctx.moveTo(TEXT_CENTER_X, 0);
+    ctx.lineTo(TEXT_CENTER_X, ctx.canvas.height);
+    ctx.moveTo(0, TEXT_CENTER_Y);
+    ctx.lineTo(ctx.canvas.width, TEXT_CENTER_Y);
+    ctx.stroke();
+
     //
     // move paddles
     //
-    
+
+    paddle0PrevXPos = paddle0XPos;
+    paddle0PrevYPos = paddle0YPos;
+
     if (keys[KEY_W]) {
         paddle0Dir = 1.0;    
     } else if (keys[KEY_S]) {
@@ -288,13 +362,20 @@ function update(timestamp) {
         paddle1Dir = 0.0;
     }
 
+    paddle1PrevXPos = paddle1XPos;
+    paddle1PrevYPos = paddle1YPos;
+
     paddle1YPos = paddle1YPos + (paddle1Dir * PADDLE_SPEED * dt);
+
     if (paddle1YPos < -MAX_PADDLE_Y) {
         paddle1YPos = -MAX_PADDLE_Y;
     }
     else if (paddle1YPos > MAX_PADDLE_Y) {
         paddle1YPos = MAX_PADDLE_Y;
     }
+
+    ballPrevXPos = ballXPos;
+    ballPrevYPos = ballYPos;
 
     ballXPos = ballXPos + (ballXDir * PADDLE_SPEED * dt);
     if (ballXPos < -MAX_BALL_X) {

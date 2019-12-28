@@ -441,10 +441,15 @@ function doGameOver() {
     let offset = ctx.measureText(playerWinsText).width / 2;
     ctx.fillText(playerWinsText, TEXT_CENTER_X-offset, TEXT_CENTER_Y);
 
+
     gameTimer -= dt;
     if (gameTimer < 0.0 || keys[KEY_SPACE]) {
         gameState = GAME_STATE_MAIN_MENU;
         keys[KEY_SPACE] = false;
+    }
+
+    if (DEBUG_MODE) {
+        ctx.fillText(gameTimer.toFixed(1), TEXT_START + PADDING_16, TEXT_TOP + PADDING_16);
     }
 }
 

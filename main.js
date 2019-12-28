@@ -37,7 +37,6 @@ const TEXT_HEIGHT = 20;
 const TEXT_CENTER_X = GAME_WIDTH / 2;
 const TEXT_CENTER_Y = GAME_HEIGHT / 2;
 
-
 let dt = 0;
 let last = 0;
 
@@ -62,7 +61,7 @@ const KEY_ARROW_DOWN = "ArrowDown";
 const KEY_ARROW_LEFT = "ArrowLeft";
 const KEY_ARROW_RIGHT = "ArrowRight";
 const KEY_CONTROL = "Control";
-const KEY_SPACE = " ";
+const KEY_SPACE = "Space";
 
 const KEY_W = "KeyW";
 const KEY_A = "KeyA";
@@ -73,6 +72,7 @@ const KEY_I = "KeyI";
 const KEY_J = "KeyJ";
 const KEY_K = "KeyK";
 const KEY_L = "KeyL";
+const KEY_Z = "KeyZ";
 
 const GAME_KEYS = [
     KEY_ARROW_LEFT,
@@ -82,7 +82,11 @@ const GAME_KEYS = [
 
     KEY_W, KEY_A, KEY_S, KEY_D,
 
-    KEY_I, KEY_J, KEY_K, KEY_L
+    KEY_I, KEY_J, KEY_K, KEY_L,
+
+    KEY_Z,
+    
+    KEY_SPACE,
 ];
 
 let keys = {};
@@ -103,11 +107,18 @@ document.addEventListener("keyup", e => {
 // TODO add responsive canvas
 
 // game text
-let START_TEXT_WIDTH = 0;
-let TITLE_TEXT_WIDTH = 0;
+const PADDING_4 = 4;
+const PADDING_8 = 8;
+const PADDING_16 = 16;
+let START_TEXT_OFFSET = 0;
+let TITLE_TEXT_OFFSET = 0;
 const START_TEXT = "START";
 const TITLE_TEXT = "WEBGL-PONG";
 
+let DEBUG_MODE = false;
+
+const GAME_TIMER_GAME_OVER = 5.0;
+let gameTimer = 0;
 
 function setup() {
 
@@ -115,8 +126,8 @@ function setup() {
     // text init
     //
 
-    START_TEXT_WIDTH = ctx.measureText(START_TEXT).width / 2;
-    TITLE_TEXT_WIDTH = ctx.measureText(TITLE_TEXT).width / 2;
+    START_TEXT_OFFSET = ctx.measureText(START_TEXT).width / 2;
+    TITLE_TEXT_OFFSET = ctx.measureText(TITLE_TEXT).width / 2;
 
     //
     // webgl init
@@ -240,12 +251,10 @@ function setup() {
 }
 
 function reset() {
-    keys[KEY_ARROW_LEFT] = false;
-    keys[KEY_ARROW_RIGHT] = false;
-    keys[KEY_ARROW_UP] = false;
-    keys[KEY_ARROW_DOWN] = false;
-    keys[KEY_CONTROL] = false;
-    keys[KEY_SPACE] = false;
+
+    GAME_KEYS.forEach(key => keys[key] = false);
+
+    DEBUG_MODE = false;
 
     paddle0XPos = 0.0 - gl.canvas.clientWidth / 2.0 + 20;
     paddle0YPos = 0.0;
@@ -260,10 +269,15 @@ function reset() {
     MAX_PADDLE_Y = 0 + gl.canvas.clientHeight / 2.0 - (PADDLE_HEIGHT / 2.0);
     MAX_BALL_X = 0 + gl.canvas.clientWidth / 2.0 - (BALL_RADIUS / 2.0);
     MAX_BALL_Y = 0 + gl.canvas.clientHeight / 2.0 - (BALL_RADIUS / 2.0);
+
+    player1Score = 0;
+    player2Score = 0;
+
+    gameTimer = 0;
+    blink = BLINK_RATE;
 }
 
-
-const PADDLE_SPEED = 120.0;
+const PADDLE_SPEED = 180.0;
 const PADDLE_WIDTH = 10.0;
 const PADDLE_HEIGHT = 60.0;
 const PADDLE_HALF_HEIGHT = PADDLE_HEIGHT / 2.0;
@@ -299,12 +313,18 @@ const PI_OVER_2 = Math.PI / 2;
 const DEG_30 = 30 * (Math.PI / 180);
 let pulseDir = 1.0;
 
-
 const BLINK_RATE = 0.5;
 let blink = BLINK_RATE;
 
 let player1Score = 0;
 let player2Score = 0;
+
+const GAME_STATE_MAIN_MENU = 0;
+const GAME_STATE_PLAY = 1;
+const GAME_STATE_PAUSE = 2;
+const GAME_STATE_GAME_OVER = 3;
+
+let gameState = GAME_STATE_MAIN_MENU;
 
 function update(timestamp) {
     
@@ -313,35 +333,115 @@ function update(timestamp) {
     dt = t - last;
     last = t;
 
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
     //
     // HUD
     //
 
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    if (keys[KEY_Z]) {
+        keys[KEY_Z] = false;
+        DEBUG_MODE = !DEBUG_MODE;
+    }
 
+    if (DEBUG_MODE) {
+        ctx.fillText(timestamp, TEXT_START, GAME_HEIGHT - PADDING_16 * 2);
+        ctx.fillText(dt.toFixed(8), TEXT_START, GAME_HEIGHT - PADDING_8);
+        
+        ctx.moveTo(TEXT_CENTER_X, 0);
+        ctx.lineTo(TEXT_CENTER_X, ctx.canvas.height);
+        ctx.moveTo(0, TEXT_CENTER_Y);
+        ctx.lineTo(ctx.canvas.width, TEXT_CENTER_Y);
+        ctx.stroke();    
+    }
 
-    // ctx.fillText(timestamp, TEXT_START, TEXT_TOP);
+    switch (gameState) {
+        case GAME_STATE_PLAY:
+        case GAME_STATE_PAUSE:
+            doGame();
+            break;
+        case GAME_STATE_MAIN_MENU:
+            doMainMenu();
+            break;
+        case GAME_STATE_GAME_OVER:
+            doGameOver();
+            break;
+        default:
+            break;    
+    }
+   
+    requestAnimationFrame(update);
+}
 
-    // ctx.fillText(dt, TEXT_START, TEXT_TOP + TEXT_HEIGHT);
-    // ctx.fillText(TITLE_TEXT, TEXT_CENTER_X-TITLE_TEXT_WIDTH, TEXT_TOP + TEXT_HEIGHT * 2);
+// http://paulbourke.net/geometry/pointlineplane/
+function checkIntersectionTwoLines(x1, y1, x2, y2, x3, y3, x4, y4) {
 
-    ctx.fillText(player1Score, TEXT_CENTER_X-22, TEXT_TOP+2);
-    ctx.fillText(player2Score, TEXT_CENTER_X+6, TEXT_TOP+2);
+    let x4x3 = x4 - x3;
+    let y1y3 = y1 - y3;    
+    let y4y3 = y4 - y3;
+    let x1x3 = x1 - x3;
+    let x2x1 = x2 - x1;
+    let y2y1 = y2 - y1;
 
+    let a = ((x4x3 * y1y3) - (y4y3 * x1x3)) / ((y4y3 * x2x1) - (x4x3 * y2y1));
+    let b = ((x2x1 * y1y3) - (y2y1 * x1x3)) / ((y4y3 * x2x1) - (x4x3 * y2y1));
+
+    if (a >= 0 && a <= 1 && b >= 0 && b <= 1) {
+        return true;
+    }
+
+    return false;
+}
+
+function doMainMenu() {
+    drawBackground();
+
+    ctx.fillText(TITLE_TEXT, TEXT_CENTER_X-TITLE_TEXT_OFFSET, TEXT_TOP + PADDING_16);
 
     blink -= dt;
     if (blink > 0.0) {
-        ctx.fillText(START_TEXT, TEXT_CENTER_X-START_TEXT_WIDTH, TEXT_CENTER_Y);    
+        ctx.fillText(START_TEXT, TEXT_CENTER_X-START_TEXT_OFFSET, TEXT_CENTER_Y);
     } else if (blink < -BLINK_RATE) {
         blink = BLINK_RATE;
     }
 
-    
-    ctx.moveTo(TEXT_CENTER_X, 0);
-    ctx.lineTo(TEXT_CENTER_X, ctx.canvas.height);
-    ctx.moveTo(0, TEXT_CENTER_Y);
-    ctx.lineTo(ctx.canvas.width, TEXT_CENTER_Y);
-    ctx.stroke();
+    if (keys[KEY_SPACE]) {
+        reset();
+        gameState = GAME_STATE_PLAY;
+        keys[KEY_SPACE] = false;
+        console.log(">>> GAME PLAY <<<");
+    }
+}
+
+function doGameOver() {
+    drawBackground();
+
+    let playerWinsText;
+
+    if (player1Score > player2Score) {
+        playerWinsText = "PLAYER 1 WINS";
+    } else {
+        playerWinsText = "PLAYER 2 WINS";
+    }
+
+    let offset = ctx.measureText(playerWinsText).width / 2;
+    ctx.fillText(playerWinsText, TEXT_CENTER_X-offset, TEXT_CENTER_Y);
+
+    gameTimer -= dt;
+    if (gameTimer < 0.0 || keys[KEY_SPACE]) {
+        gameState = GAME_STATE_MAIN_MENU;
+        keys[KEY_SPACE] = false;
+    }
+}
+
+function doGame() {
+
+    //
+    // HUD
+    //
+
+    ctx.fillText(player1Score, PADDING_8, TEXT_TOP+PADDING_4);
+    ctx.fillText(player2Score, GAME_WIDTH - PADDING_16 - PADDING_8, TEXT_TOP+PADDING_4);
 
     //
     // move paddles
@@ -445,57 +545,25 @@ function update(timestamp) {
     }
 
     //
+    // check for game over
+    //
+
+    if (player1Score === 9 || player2Score === 9) {
+        gameState = GAME_STATE_GAME_OVER;
+        gameTimer = GAME_TIMER_GAME_OVER;
+    }
+
+    //
     // draw
     //
 
-    gl.useProgram(shaders['program1'].program);
-
-    //
-    // set projection matrix for use by background
-    //
-
-    gl.uniformMatrix4fv(
-        shaders['program1']['uniforms']['u_modelviewProjection'],
-        false,
-        normalizedModelViewProjection
-    );    
-
-    // background
-    {
-
-        mat4.identity(modelScale);
-        gl.uniformMatrix4fv(
-            shaders['program1']['uniforms']['u_Scale'],
-            false,
-            modelScale
-        );
-
-        mat4.identity(modelTranslate);
-        gl.uniformMatrix4fv(
-            shaders['program1']['uniforms']['u_Translate'],
-            false,
-            modelTranslate
-        );
-    
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffers['2x2_rect']['buffer']);
-        gl.vertexAttribPointer(
-            shaders['program1']['attribs']['a_coords'],
-            buffers['2x2_rect']['size'],
-            gl.FLOAT,
-            false,
-            0,
-            0
-        );
-        gl.enableVertexAttribArray(shaders['program1']['attribs']['a_coords']);
-    
-        gl.uniform4f(shaders['program1']['uniforms']['u_color'], 1, 0, 0, 1);
-    
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, buffers['2x2_rect']['count']);
-    }
+    drawBackground();
 
     //
     // set projection matrix for use by game objects
     //
+
+    gl.useProgram(shaders['program1'].program);
 
     gl.uniformMatrix4fv(
         shaders['program1']['uniforms']['u_modelviewProjection'],
@@ -623,32 +691,56 @@ function update(timestamp) {
     
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, buffers['unit_square']['count']);
     }
-   
-    requestAnimationFrame(update);
 }
 
-// http://paulbourke.net/geometry/pointlineplane/
-function checkIntersectionTwoLines(x1, y1, x2, y2, x3, y3, x4, y4) {
+function drawBackground() {
+    //
+    // draw
+    //
 
-    let x4x3 = x4 - x3;
-    let y1y3 = y1 - y3;
-    
-    let y4y3 = y4 - y3;
-    let x1x3 = x1 - x3;
+    gl.useProgram(shaders['program1'].program);
 
-    let x2x1 = x2 - x1;
-    let y2y1 = y2 - y1;
+    //
+    // set projection matrix for use by background
+    //
 
-    let a = ((x4x3 * y1y3) - (y4y3 * x1x3)) / ((y4y3 * x2x1) - (x4x3 * y2y1));
-    let b = ((x2x1 * y1y3) - (y2y1 * x1x3)) / ((y4y3 * x2x1) - (x4x3 * y2y1));
+    gl.uniformMatrix4fv(
+        shaders['program1']['uniforms']['u_modelviewProjection'],
+        false,
+        normalizedModelViewProjection
+    );    
 
-    if (a >= 0 && a <= 1 && b >= 0 && b <= 1) {
-        return true;
-    }
+    // background
 
-    return false;
+    mat4.identity(modelScale);
+    gl.uniformMatrix4fv(
+        shaders['program1']['uniforms']['u_Scale'],
+        false,
+        modelScale
+    );
+
+    mat4.identity(modelTranslate);
+    gl.uniformMatrix4fv(
+        shaders['program1']['uniforms']['u_Translate'],
+        false,
+        modelTranslate
+    );
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers['2x2_rect']['buffer']);
+    gl.vertexAttribPointer(
+        shaders['program1']['attribs']['a_coords'],
+        buffers['2x2_rect']['size'],
+        gl.FLOAT,
+        false,
+        0,
+        0
+    );
+    gl.enableVertexAttribArray(shaders['program1']['attribs']['a_coords']);
+
+    gl.uniform4f(shaders['program1']['uniforms']['u_color'], 1, 0, 0, 1);
+
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, buffers['2x2_rect']['count']);
 }
-
 
 requestAnimationFrame(setup);
 
@@ -676,4 +768,3 @@ function loadShader(gl, type, source) {
     }
     return shader;
 }
-

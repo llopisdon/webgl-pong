@@ -1,7 +1,12 @@
 # webgl-pong
+
 WebGL Pong
 
 A WebGL/HTML5 Pong Remake.
+
+https://llopisdon.github.io/webgl-pong/
+
+![screenshot](/res/screenshot.png)
 
 ## Resources
 - https://www.sitepoint.com/premium/books/html5-games-novice-to-ninja/

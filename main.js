@@ -1,4 +1,4 @@
-import { mat4 } from "./node_modules/gl-matrix/esm/index.js";
+import { mat4 } from "./lib/gl-matrix/esm/index.js";
 
 // NES dimensions for fun
 const GAME_WIDTH = 256;

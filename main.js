@@ -21,7 +21,7 @@ textCanvas.width = GAME_WIDTH;
 textCanvas.height = GAME_HEIGHT;
 /** @type {CanvasRenderingContext2D} */
 const ctx = textCanvas.getContext("2d");
-ctx.font = '24px  "Pixel NES"';
+ctx.font = '20px "Pixel NES"';
 ctx.fillStyle = "white";
 ctx.strokeStyle = "white";
 

@@ -18,5 +18,5 @@ https://llopisdon.github.io/webgl-pong/
 - http://learnwebgl.brown37.net/index.html
 - http://paulbourke.net/geometry/pointlineplane/
 - https://hacks.mozilla.org/2016/06/webfont-preloading-for-html5-games/
-- Pixel NES Font from http://www.pixelsagas.com/
+- [Pixel NES Font](http://www.pixelsagas.com/?download=pixel-emulator)
 

@@ -7,12 +7,17 @@
     <style>
     @font-face {
         font-family:"Pixel NES";
-        src:url("res/Pixel_NES.eot?") format("eot"),url("res/Pixel_NES.woff") format("woff"),url("res/Pixel_NES.ttf") format("truetype"),url("res/Pixel_NES.svg#PixelNES") format("svg");
+        src:url("res/Pixel_NES.eot?") format("eot"),
+            url("res/Pixel_NES.otf") format("otf"),
+            url("res/Pixel_NES.ttf") format("truetype"),
+            url("res/Pixel_NES.svg#PixelNES") format("svg"),
+            url("res/Pixel_NES.woff") format("woff");
         font-weight:normal;
         font-style:normal;
     }
-    h1 {
+    p {
         font-family: "Pixel NES";
+        font-size: 8px;
     }
     .container {
         position: relative;
@@ -26,7 +31,7 @@
     </style>
 </head>
 <body>
-    <h1>WEBGL-PONG</h1>
+    <p>webgl-experiments</p>
     <div class="container">
         <canvas id="canvas"></canvas>
         <canvas id="text"></canvas>    

@@ -10,5 +10,6 @@ WebGL Pong
 - https://webglfundamentals.org/webgl/lessons/webgl-text-canvas2d.html
 - http://learnwebgl.brown37.net/index.html
 - http://paulbourke.net/geometry/pointlineplane/
+- https://hacks.mozilla.org/2016/06/webfont-preloading-for-html5-games/
 - Pixel NES Font from http://www.pixelsagas.com/
 

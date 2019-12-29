@@ -1,6 +1,8 @@
 # webgl-pong
 WebGL Pong
 
+A WebGL/HTML5 Pong Remake.
+
 ## Resources
 - https://www.sitepoint.com/premium/books/html5-games-novice-to-ninja/
 - https://developer.mozilla.org/en-US/docs/Games/Anatomy

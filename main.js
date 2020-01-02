@@ -288,6 +288,10 @@ const PADDLE_HALF_WIDTH = PADDLE_WIDTH / 2.0;
 const BALL_RADIUS = PADDLE_WIDTH;
 const BALL_HALF_RADIUS = BALL_RADIUS / 2.0;
 
+const DIVIDER_WIDTH = 5.0;
+const DIVIDER_HEIGHT = 10.0;
+const DIVIDER_START_Y = (GAME_HEIGHT / 2.0) - (DIVIDER_HEIGHT / 2.0) - (DIVIDER_HEIGHT / 2.0);
+
 let MAX_PADDLE_Y = 0;
 let MAX_BALL_X = 0;
 let MAX_BALL_Y = 0;
@@ -622,12 +626,12 @@ function doGame() {
     );
 
     // middle divider
-    {
+    for (let i=0; i<12; i++) {
         
         mat4.identity(modelScale);
         mat4.scale(modelScale,
             modelScale,
-            [ PADDLE_WIDTH, GAME_HEIGHT, 0 ]);
+            [ DIVIDER_WIDTH, DIVIDER_HEIGHT, 0 ]);
     
         gl.uniformMatrix4fv(
             shaders['program1']['uniforms']['u_Scale'],
@@ -635,7 +639,12 @@ function doGame() {
             modelScale
         );
 
+        let dividerYPos = DIVIDER_START_Y - (i * DIVIDER_HEIGHT * 2);
+
         mat4.identity(modelTranslate);
+        mat4.translate(modelTranslate,
+            modelTranslate,
+            [0.0, dividerYPos, 0.0]);
 
         gl.uniformMatrix4fv(
             shaders['program1']['uniforms']['u_Translate'],
@@ -654,7 +663,7 @@ function doGame() {
         );
         gl.enableVertexAttribArray(shaders['program1']['attribs']['a_coords']);
     
-        gl.uniform4f(shaders['program1']['uniforms']['u_color'], 0, 0, 0, 1);
+        gl.uniform4f(shaders['program1']['uniforms']['u_color'], 1, 1, 1, 1);
     
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, buffers['unit_square']['count']);
     }

@@ -846,7 +846,7 @@ function drawBackground() {
     );
     gl.enableVertexAttribArray(shaders['program1']['attribs']['a_coords']);
 
-    gl.uniform4f(shaders['program1']['uniforms']['u_color'], 1, 0, 0, 1);
+    gl.uniform4f(shaders['program1']['uniforms']['u_color'], 0, 0, 0, 1);
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, buffers['2x2_rect']['count']);
 }
